@@ -88,23 +88,15 @@ If module installation fails (e.g., due to missing admin rights, blocked PSGalle
     - **Single user (enter a single UPN)**
     - **Azure AD group (enter group display name; script resolves users)**
 
+- **Single user**: you’ll enter one UPN (e.g., `user@contoso.com`).
 
-
-Single user: you’ll enter one UPN (e.g., user@contoso.com).
-
-Azure AD group:
-
-Enter (part of) the group’s display name.
-
-If multiple groups match, you’ll select one from a numbered list.
-
-The script will:
-
-Resolve the group’s ObjectId.
-
-Retrieve its user members.
-
-List their UPNs.
+- **Azure AD group**:
+    - Enter (part of) the group’s display name.
+    - If multiple groups match, you’ll select one from a numbered list.
+    - The script will:
+        - Resolve the group’s ObjectId.
+        - Retrieve its user members.
+        - List their UPNs.
 
 2. Choose which policy to assign
 
