@@ -82,7 +82,7 @@ If module installation fails (e.g., due to missing admin rights, blocked PSGalle
 
 1. **Choose scope (who is affected)**
 
-    - You’ll be asked:
+    You’ll be asked:
     
     Select WHO will be affected by this change:
     - `Single user (enter a single UPN)`
