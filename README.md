@@ -83,9 +83,10 @@ If module installation fails (e.g., due to missing admin rights, blocked PSGalle
 1. **Choose scope (who is affected)**
 
     - You’ll be asked:
+    
     Select WHO will be affected by this change:
-    1. `Single user (enter a single UPN)`
-    2. `Azure AD group (enter group display name; script resolves users)`
+        - `Single user (enter a single UPN)`
+        - `Azure AD group (enter group display name; script resolves users)`
 
 
 
