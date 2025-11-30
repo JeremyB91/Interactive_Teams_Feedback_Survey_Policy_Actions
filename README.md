@@ -169,3 +169,20 @@ The script lets you choose from the four built-in Teams feedback policies:
    - `Tag:Enabled` = **feedback/surveys allowed**
    - `Tag:UserChoice` = **user decides in client**
    - `Global` = **follow your tenant default**
+
+---
+
+## Logging
+
+The script uses PowerShell’s transcript functionality:
+- A log is created in the same folder as the script:
+    - `TeamsFeedbackPolicy_YYYYMMDD_HHMMSS.log`
+- The log includes:
+    - Module checks and installs
+    - Connections to Teams/Azure AD
+    - Scope choices
+    - Policy choices
+    - All resolved UPNs
+    - Per-user grant attempts and any errors
+    - Final summary
+You can open the log in any text editor for auditing or troubleshooting.
