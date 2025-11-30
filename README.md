@@ -82,7 +82,7 @@ If module installation fails (e.g., due to missing admin rights, blocked PSGalle
 
 1. **Choose scope (who is affected)**
 
-    - You’ll be asked:
+    You’ll be asked:
     
     Select WHO will be affected by this change:
     - **Single user (enter a single UPN)**
@@ -98,30 +98,32 @@ If module installation fails (e.g., due to missing admin rights, blocked PSGalle
         - Retrieve its user members.
         - List their UPNs.
 
-2. Choose which policy to assign
+2. **Choose which policy to assign**
 
-You’ll be shown:
+    You’ll be shown:
 
-Please choose which Teams feedback policy to assign:
+    Please choose which Teams feedback policy to assign:
+     - **"Global"**
+     - **"Tag:Enabled"**
+     - **"Tag:Disabled"**
+     - **"Tag:UserChoice"**
 
-Global
+    Each option comes with a short description in the script. More details are below.
 
-Tag:Enabled
+3. **Review the summary**
 
-Tag:Disabled
+    Before anything changes, you’ll see something like:
+    - Scope (User or Group)
+    - Policy selected
+    - Number of users
+    - All affected UPNs
 
-Tag:UserChoice
-
-Each option comes with a short description in the script. More details are below.
-
-3. Review the summary
-
-Before anything changes, you’ll see something like:
-
-Scope (User or Group)
-
-Policy selected
-
-Number of users
-
-All affected UPNs
+    Example:
+    ```text
+    Scope       : Group
+    Policy      : Tag:Disabled
+    User Count  : 12
+    Users (UPN) :
+        - alice@contoso.com
+        - bob@contoso.com
+        ...
