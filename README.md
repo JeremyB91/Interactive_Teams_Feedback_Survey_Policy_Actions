@@ -147,7 +147,7 @@ If module installation fails (e.g., due to missing admin rights, blocked PSGalle
         ...
     ```
 
-        Example(Check mode):
+    Example(Check mode):
     ```text
     Operation   : Check
     Scope       : User
