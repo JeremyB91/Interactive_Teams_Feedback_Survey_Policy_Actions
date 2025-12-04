@@ -135,7 +135,7 @@ If module installation fails (e.g., due to missing admin rights, blocked PSGalle
     - Number of users
     - All affected/checked UPNs
 
-    Example(Assing mode):
+    Example(Assign mode):
     ```text
     Operation   : Assign
     Scope       : Group
@@ -174,15 +174,15 @@ If module installation fails (e.g., due to missing admin rights, blocked PSGalle
 
     ---
 
-5. **Checking current policies (read-only)
+5. **Checking current policies (read-only)**
 
-    When you choose the **Chck current Teams feedback policy** operation, the script:
+    When you choose the **Check current Teams feedback policy** operation, the script:
 
     1. Resolves the target users (UPN or group members).
-    2. Calls `Fet-CsOnlineUser1 for each user.
-    3. Buids a small table showing:
+    2. Calls `Get-CsOnlineUser` for each user.
+    3. Builds a small table showing:
       - `DisplayName`
-      - `UserPrincipleName`
+      - `UserPrincipalName`
       - `TeamsFeedbackPolicy`
     4. Outputs this table to the console
 
