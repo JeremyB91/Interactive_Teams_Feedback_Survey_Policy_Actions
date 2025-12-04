@@ -1,6 +1,6 @@
 # Teams Feedback Policy Helper
 
-This script provides an **interactive**, admin-friendly way to assign Microsoft Teams feedback policies to users or groups.
+This script provides an **interactive**, admin-friendly way to assign Microsoft Teams feedback policies to users or groups. In addition to assigning policies, the script can also check the *current* Teams feedback policy applied to a specific user or all members of an Azure AD group, without making any changes.
 
 It’s designed for Global Admins / Teams Admins who want to control the post-meeting / call-feedback experience (surveys, prompts, etc.) without having to remember all the PowerShell details.
 
@@ -14,6 +14,9 @@ It’s designed for Global Admins / Teams Admins who want to control the post-me
 - Connects to:
   - Microsoft Teams (`Connect-MicrosoftTeams`)
   - Azure AD (`Connect-AzureAD`)
+- Lets you choose **what** you want to do:
+  - **Assign/Update** a Teams feedback policy
+  - **Check current** Teams feedback policy (no changes)
 - Lets you choose **who** will be affected:
   - A single user (by UPN)
   - An Azure AD group (by name; script resolves users)
@@ -24,6 +27,9 @@ It’s designed for Global Admins / Teams Admins who want to control the post-me
   - Selected policy
   - **All affected users by UPN**
 - Applies the changes via `Grant-CsTeamsFeedbackPolicy`
+- In **check-only** mode:
+  - Retrieves each user's current `TeamsFeedbackPolicy` via `Get-CsOnlineUser`
+  - Displays the results in a simple table in the console
 - Logs **every step** to:
   - The terminal
   - A timestamped log file (`TeamsFeedbackPolicy_YYYYMMDD_HHMMSS.log`)
@@ -80,25 +86,35 @@ If module installation fails (e.g., due to missing admin rights, blocked PSGalle
 
 ## Interactive Flow
 
-1. **Choose scope (who is affected)**
+1. **Choose operation (what you want to do)**
 
-    You’ll be asked:
+    You’ll first be asked to choose:
     
-    Select WHO will be affected by this change:
+    - **Assign/Update Teams feedback policy**
+    - **Check current Teams feedback policy (no changes)**
+
+    This determines whether the script will **modify** policies or only **report** on existing ones.
+
+2. **Choose scope (who is affected/checked)**
+
+    You'll then be asked:
+
+    Select WHO will be affected/checked:
+
     - **Single user (enter a single UPN)**
     - **Azure AD group (enter group display name; script resolves users)**
-
-- **Single user**: you’ll enter one UPN (e.g., `user@contoso.com`).
-
-- **Azure AD group**:
+    
+  - **Single user**: you’ll enter one UPN (e.g., `user@contoso.com`).
+    
+  - **Azure AD group**:
     - Enter (part of) the group’s display name.
     - If multiple groups match, you’ll select one from a numbered list.
     - The script will:
-        - Resolve the group’s ObjectId.
-        - Retrieve its user members.
-        - List their UPNs.
+    - Resolve the group’s ObjectId.
+    - Retrieve its user members.
+    - List their UPNs.
 
-2. **Choose which policy to assign**
+3. If you chose **Assign/Update** - choose which policy to assign
 
     You’ll be shown:
 
@@ -108,18 +124,20 @@ If module installation fails (e.g., due to missing admin rights, blocked PSGalle
      - **"Tag:Disabled"**
      - **"Tag:UserChoice"**
 
-    Each option comes with a short description in the script. More details are below.
+    Each option comes with a short description in the script. More details are below in **Policy options explained**.
 
-3. **Review the summary**
+4. **Review the summary & confirm**
 
-    Before anything changes, you’ll see something like:
+    Before anything changes(Assign), or before the check runs (Check), you’ll see something like:
+    - Operation (Assign or Check)
     - Scope (User or Group)
-    - Policy selected
+    - Policy selected (Assign only)
     - Number of users
-    - All affected UPNs
+    - All affected/checked UPNs
 
-    Example:
+    Example(Assing mode):
     ```text
+    Operation   : Assign
     Scope       : Group
     Policy      : Tag:Disabled
     User Count  : 12
@@ -129,14 +147,56 @@ If module installation fails (e.g., due to missing admin rights, blocked PSGalle
         ...
     ```
 
-    You'll then be asked to confirm:
+        Example(Check mode):
+    ```text
+    Operation   : Check
+    Scope       : User
+    User Count  : 1
+    Users (UPN) :
+        - user@contoso.com
+    ```
+
+    - In **Assign** mode you'll see:
+
     ```text
     Do you want to apply this policy to ALL of the users listed above? (Y/N)
     ```
     - Enter **Y** to proceed.
     - Enter **N** to cancel with no changes made.
 
+    - In **Check** mode you'll see:
+
+    ```text
+    Proceed to CHECK current policies for the users listed above? (Y/N)
+    ```
+    - Enter **Y** to fetch and display current policies.
+    - Enter **N** to cancel with no changes made.
+
     ---
+
+5. **Checking current policies (read-only)
+
+    When you choose the **Chck current Teams feedback policy** operation, the script:
+
+    1. Resolves the target users (UPN or group members).
+    2. Calls `Fet-CsOnlineUser1 for each user.
+    3. Buids a small table showing:
+      - `DisplayName`
+      - `UserPrincipleName`
+      - `TeamsFeedbackPolicy`
+    4. Outputs this table to the console
+
+    Example Output:
+    
+    ```text
+    DisplayName   UserPrincipalName      TeamsFeedbackPolicy
+    -----------   -------------------    -------------------
+    Alice Smith   alice@contoso.com      Tag:Disabled
+    Bob Jones     bob@contoso.com        Global
+    ```
+
+    No changes are made in this mode; it is purely for inspection/reporting.
+
 
 ## Policy options explained
 
@@ -180,6 +240,8 @@ The script uses PowerShell’s transcript functionality:
 - The log includes:
     - Module checks and installs
     - Connections to Teams/Azure AD
+    - Operation choice (Assign vs Check)
+    - Policy inspection results (check mode)
     - Scope choices
     - Policy choices
     - All resolved UPNs
