@@ -1,20 +1,26 @@
 <#
 .SYNOPSIS
-Interactive helper to assign Microsoft Teams feedback policies to users or groups.
+Interactive helper to assign or inspect Microsoft Teams feedback policies for users or groups.
 
 .DESCRIPTION
 - Ensures required modules (MicrosoftTeams, AzureAD) are installed and imported.
 - Connects to Microsoft Teams and Azure AD.
+- Lets the admin choose the operation:
+    - Assign/Update feedback policy
+    - Check current feedback policy (no changes)
 - Lets the admin choose the target scope:
     - Single user (UPN)
     - Azure AD group (by name; script resolves ObjectId and members)
-- Lets the admin choose which TeamsFeedbackPolicy to assign:
-    - Global
-    - Tag:Enabled
-    - Tag:Disabled
-    - Tag:UserChoice
-- Shows a summary of WHO will be affected (lists all UPNs) and HOW (policy), then asks for confirmation.
-- Applies the changes and logs every step to both the console and a transcript log file.
+- For Assign/Update:
+    - Lets the admin choose which TeamsFeedbackPolicy to assign:
+        - Global
+        - Tag:Enabled
+        - Tag:Disabled
+        - Tag:UserChoice
+    - Shows a summary of WHO will be affected (lists all UPNs) and HOW (policy), then asks for confirmation.
+    - Applies the changes and logs every step to both the console and a transcript log file.
+- For Check:
+    - Resolves the user or group members (UPNs) and displays their current TeamsFeedbackPolicy.
 #>
 
 [CmdletBinding()]
@@ -121,14 +127,37 @@ catch {
 
 #endregion Connections
 
+#region Operation Choice
+
+function Select-Operation {
+    Write-Host ""
+    Write-Host "===================== Operation Selection ==================="
+    Write-Host "Select WHAT you want to do:"
+    Write-Host "1) Assign/Update Teams feedback policy"
+    Write-Host "2) Check current Teams feedback policy (no changes)"
+    Write-Host "============================================================="
+    $op = Read-Host "Enter option number (1-2)"
+
+    switch ($op) {
+        '1' { return 'Assign' }
+        '2' { return 'Check' }
+        default {
+            Write-Warn "Invalid selection '$op'. Please try again."
+            return Select-Operation
+        }
+    }
+}
+
+#endregion Operation Choice
+
 #region Policy Choice
 
 function Select-FeedbackPolicy {
     Write-Host ""
     Write-Host "================= Feedback Policy Selection ================="
     Write-Host "Please choose which Teams feedback policy to assign:"
-    Write-Host "1) Global      - Use tenant-wide default feedback behavior."
-    Write-Host "2) Tag:Enabled - Always allow feedback surveys."
+    Write-Host "1) Global       - Use tenant-wide default feedback behavior."
+    Write-Host "2) Tag:Enabled  - Always allow feedback surveys."
     Write-Host "3) Tag:Disabled - Disable all feedback & surveys."
     Write-Host "4) Tag:UserChoice - Let users control feedback in their client."
     Write-Host "============================================================="
@@ -153,7 +182,7 @@ function Select-FeedbackPolicy {
 function Select-Scope {
     Write-Host ""
     Write-Host "====================== Scope Selection ======================"
-    Write-Host "Select WHO will be affected by this change:"
+    Write-Host "Select WHO will be affected / checked:"
     Write-Host "1) Single user (enter a single UPN)"
     Write-Host "2) Azure AD group (enter group display name; script resolves users)"
     Write-Host "============================================================="
@@ -270,11 +299,56 @@ function Get-GroupScopeUPNs {
 
 #endregion Scope Choice
 
+#region Policy Inspection
+
+function Show-CurrentFeedbackPolicyForUsers {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string[]]$UserUPNs
+    )
+
+    Write-Info ("Retrieving current Teams feedback policy for {0} user(s)..." -f $UserUPNs.Count)
+
+    $results = @()
+
+    foreach ($upn in $UserUPNs) {
+        Write-Info ("Checking user '{0}'..." -f $upn)
+        try {
+            $user = Get-CsOnlineUser -Identity $upn -ErrorAction Stop
+            $results += [PSCustomObject]@{
+                DisplayName         = $user.DisplayName
+                UserPrincipalName   = $user.UserPrincipalName
+                TeamsFeedbackPolicy = $user.TeamsFeedbackPolicy
+            }
+        }
+        catch {
+            Write-Warn ("Could not retrieve TeamsFeedbackPolicy for user '{0}'. Error: {1}" -f $upn, $_)
+            $results += [PSCustomObject]@{
+                DisplayName         = $null
+                UserPrincipalName   = $upn
+                TeamsFeedbackPolicy = "Error: see log"
+            }
+        }
+    }
+
+    if ($results.Count -gt 0) {
+        Write-Host ""
+        Write-Host "================ CURRENT TEAMS FEEDBACK POLICIES ============"
+        $results | Sort-Object UserPrincipalName | Format-Table -AutoSize | Out-Host
+        Write-Host "============================================================="
+        Write-Host ""
+    }
+    else {
+        Write-Warn "No results to display."
+    }
+}
+
+#endregion Policy Inspection
+
 #region Main Flow
 
-Write-Info "Retrieving available Teams feedback policies..."
-$policies = Get-CsTeamsFeedbackPolicy
-Write-Info ("Found {0} Teams feedback policy object(s)." -f $policies.Count)
+$operation = Select-Operation
+Write-Info ("Operation selected: {0}" -f $operation)
 
 $scopeSelection  = Select-Scope
 $targetUPNs      = @()
@@ -296,12 +370,43 @@ if (-not $targetUPNs -or $targetUPNs.Count -eq 0) {
     exit 1
 }
 
+# Shared summary
+Write-Host ""
+Write-Host "========================== SUMMARY =========================="
+Write-Host ("Operation   : {0}" -f $operation)
+Write-Host ("Scope       : {0}" -f $scopeSelection)
+Write-Host ("User Count  : {0}" -f $targetUPNs.Count)
+Write-Host "Users (UPN) :"
+$targetUPNs | ForEach-Object { Write-Host "  - $_" }
+Write-Host "============================================================="
+Write-Host ""
+
+if ($operation -eq 'Check') {
+    $confirmCheck = Read-Host "Proceed to CHECK current policies for the users listed above? (Y/N)"
+    if ($confirmCheck -notmatch '^(Y|y)$') {
+        Write-Warn "Operation cancelled by user."
+        Stop-Transcript | Out-Null
+        exit 0
+    }
+
+    Show-CurrentFeedbackPolicyForUsers -UserUPNs $targetUPNs
+    Write-Info "All done."
+    Stop-Transcript | Out-Null
+    exit 0
+}
+
+# If we got here, operation is Assign
+Write-Info "Retrieving available Teams feedback policies..."
+$policies = Get-CsTeamsFeedbackPolicy
+Write-Info ("Found {0} Teams feedback policy object(s)." -f $policies.Count)
+
 $policyName = Select-FeedbackPolicy
 Write-Info ("Policy selected: {0}" -f $policyName)
 
-# Summary
+# Summary including policy
 Write-Host ""
 Write-Host "========================== SUMMARY =========================="
+Write-Host ("Operation   : {0}" -f $operation)
 Write-Host ("Scope       : {0}" -f $scopeSelection)
 Write-Host ("Policy      : {0}" -f $policyName)
 Write-Host ("User Count  : {0}" -f $targetUPNs.Count)
@@ -359,3 +464,5 @@ if ($targetUPNs.Count -gt 0) {
 
 Write-Info "All done."
 Stop-Transcript | Out-Null
+
+#endregion Main Flow
